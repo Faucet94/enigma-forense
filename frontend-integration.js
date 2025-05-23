@@ -1,21 +1,12 @@
 // Integração do frontend com o backend para contador real e bloqueio de VPN
 // Este arquivo deve ser incluído no HTML principal
 
-// Configuração do Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyAr2JGtfUrzmU7c3QNmY-I6TNZbTf5lOSo",
-  authDomain: "enigma-forense-default-rtdb.firebaseapp.com",
-  projectId: "enigma-forense-default-rtdb",
-  storageBucket: "enigma-forense-default-rtdb.firebasestorage.app",
-  messagingSenderId: "18158050058",
-  appId: "1:18158050058:web:054a1a533216640554f8f3",
-  measurementId: "G-VEZ8SXHS3X"
-};
+// (Removido bloco duplicado de configuração do Firebase)
 
 // Classe para gerenciar a integração com o backend
 class EnigmaBackendService {
   constructor() {
-    this.baseUrl = 'https://enigma-forense-backend.onrender.com/api'; // URL do backend local
+    this.baseUrl = 'http://localhost:3000/api'; // URL do backend local
     this.socket = null;
     this.userId = null;
     this.isConnected = false;
@@ -284,3 +275,18 @@ class EnigmaBackendService {
 
 // Exportar instância única do serviço
 const backendService = new EnigmaBackendService();
+
+// Integração do frontend com o backend para contador real e bloqueio de VPN
+// Este arquivo deve ser incluído no HTML principal
+
+// Configuração do Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyAr2JGtfUrzmU7c3QNmY-I6TNZbTf5lOSo",
+  authDomain: "enigma-forense-default-rtdb.firebaseapp.com",
+  projectId: "enigma-forense-default-rtdb",
+  storageBucket: "enigma-forense-default-rtdb.firebasestorage.app",
+  messagingSenderId: "18158050058",
+  appId: "1:18158050058:web:054a1a533216640554f8f3",
+  measurementId: "G-VEZ8SXHS3X"
+};
+
