@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enigma Forense</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2.1.4/dist/fingerprint2.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <!-- Socket.io Client -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Frontend Integration Service -->
+    <script src="frontend-integration.js"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Special+Elite&family=Cinzel:wght@400;700&display=swap");
+
+        :root {
+            --primary-color: #8b0000;
+            --secondary-color: #d4af37;
+            --bg-color: #1a1a1a;
+            --text-color: #f8fafc;
+            --leather-color: #8B4513;
+            --leather-light: #A0522D;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: "Special Elite", monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png");
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        h1 {
+            font-family: "Cinzel", serif;
+            font-size: 2.5rem;
+            color: var(--secondary-color);
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-family: "Cinzel", serif;
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+
+        .leather-panel {
+            background-color: var(--leather-color);
+            background-image: url("https://www.transparenttextures.com/patterns/leather.png");
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .leather-panel::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--leather-color), var(--secondary-color), var(--leather-color));
+        }
+
+        .leather-panel::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--leather-color), var(--secondary-color), var(--leather-color));
+        }
+
+        .input-container {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            font-family: "Special Elite", monospace;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: var(--text-color);
+            border: 2px solid var(--secondary-color);
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input:focus {
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+        }
+
+        .output-container {
+            min-height: 100px;
+            margin-bottom: 20px;
+        }
+
+        .output {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            font-size: 2rem;
+            margin-top: 20px;
+        }
+
+        .letter {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease-in;
+            color: var(--secondary-color);
+            text-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+        }
+
+        .letter.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: block;
+            border: 1px solid var(--secondary-color);
+        }
+
+        .enigma-container {
+            display: none;
+            opacity: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .enigma-content {
+            max-width: 800px;
+            background-color: var(--leather-color);
+            background-image: url("https://www.transparenttextures.com/patterns/leather.png");
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
+            text-align: center;
+            position: relative;
+        }
+
+        .enigma-title {
+            font-family: "Cinzel", serif;
+            font-size: 2.2rem;
+            color: var(--secondary-color);
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        .enigma-description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+
+        .enigma-clue {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 5px solid var(--secondary-color);
+        }
+
+        .enigma-clue p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .enigma-hash {
+            font-family: monospace;
+            font-size: 1.2rem;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+            word-break: break-all;
+            color: var(--secondary-color);
+        }
+
+        .enigma-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2rem;
+            font-family: "Special Elite", monospace;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: var(--text-color);
+            border: 2px solid var(--secondary-color);
+            border-radius: 5px;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .enigma-button {
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            font-family: "Cinzel", serif;
+            background-color: var(--secondary-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .enigma-button:hover {
+            background-color: #b8860b;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .enigma-button:active {
+            transform: translateY(0);
+        }
+
+        .enigma-result {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .enigma-success {
+            color: #4caf50;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .enigma-failure {
+            color: #f44336;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .egyptian-clue {
+            display: none;
+            margin-top: 30px;
+            padding: 30px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            border: 2px solid var(--secondary-color);
+        }
+
+        .egyptian-clue-title {
+            font-family: "Cinzel", serif;
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .egyptian-clue-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: justify;
+        }
+
+        .egyptian-image {
+            max-width: 100%;
+            height: auto;
+            margin: 20px 0;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .burn-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .burn-effect.active {
+            opacity: 1;
+            animation: burnScreen 5s forwards;
+        }
+
+        @keyframes burnScreen {
+            0% {
+                background-color: rgba(0, 0, 0, 0);
+            }
+            20% {
+                background-color: rgba(0, 0, 0, 0.8);
+            }
+            40% {
+                background-color: rgba(0, 0, 0, 1);
+            }
+            60% {
+                background-color: rgba(0, 0, 0, 1);
+            }
+            100% {
+                background-color: rgba(0, 0, 0, 0);
+                pointer-events: none;
+            }
+        }
+
+        .particles-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.5;
+            }
+            90% {
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(-1000px) translateX(100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .seal {
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 100px;
+            height: 100px;
+            background-color: var(--secondary-color);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transform: rotate(15deg);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            z-index: 2;
+        }
+
+        .seal::before {
+            content: "";
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border: 2px dashed var(--bg-color);
+            border-radius: 50%;
+        }
+
+        .seal-icon {
+            font-size: 2rem;
+            color: var(--bg-color);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            margin-top: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--secondary-color);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        /* Novos estilos para contador de usuários */
+        .users-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--secondary-color);
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .users-counter-title {
+            font-family: "Cinzel", serif;
+            color: var(--secondary-color);
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .users-counter-value {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .users-counter-label {
+            color: #aaa;
+        }
+
+        .users-counter-number {
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        .difficulty-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: var(--primary-color);
+            color: var(--secondary-color);
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-family: "Cinzel", serif;
+        }
+
+        .vpn-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .vpn-warning-content {
+            max-width: 600px;
+            background-color: var(--leather-color);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid var(--primary-color);
+        }
+
+        .vpn-warning-title {
+            font-family: "Cinzel", serif;
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .vpn-warning-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .vpn-warning-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        /* Estilos para enigmas de nível 2 e 3 */
+        .enigma-level-2,
+        .enigma-level-3 {
+            display: none;
+        }
+
+        .enigma-timer {
+            font-family: "Special Elite", monospace;
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+
+        .enigma-hint-button {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: var(--secondary-color);
+            border: 1px solid var(--secondary-color);
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .enigma-hint {
+            display: none;
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .invert-button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-family: "Cinzel", serif;
+            background-color: var(--secondary-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .invert-button:hover {
+            background-color: #b8860b;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .invert-button:active {
+            transform: translateY(0);
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            color: #aaa;
+            z-index: 1000;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            .enigma-title {
+                font-size: 1.8rem;
+            }
+
+            .enigma-content {
+                padding: 20px;
+            }
+
+            .seal {
+                width: 80px;
+                height: 80px;
+                top: -20px;
+                right: -20px;
+            }
+
+            .seal::before {
+                width: 70px;
+                height: 70px;
+            }
+
+            .seal-icon {
+                font-size: 1.5rem;
+            }
+
+            .users-counter {
+                top: 10px;
+                right: 10px;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="particles-container" id="particles"></div>
+    <div class="burn-effect" id="burnEffect"></div>
+
+    <!-- Contador de usuários -->
+    <div class="users-counter" id="usersCounter">
+        <div class="users-counter-title">ESTATÍSTICAS DA INVESTIGAÇÃO</div>
+        <div class="users-counter-value">
+            <span class="users-counter-label">Investigadores ativos:</span>
+            <span class="users-counter-number" id="activeUsers">0</span>
+        </div>
+        <div class="users-counter-value">
+            <span class="users-counter-label">Enigmas ativados:</span>
+            <span class="users-counter-number" id="activatedEnigmas">0</span>
+        </div>
+        <div class="users-counter-value">
+            <span class="users-counter-label">Enigmas resolvidos:</span>
+            <span class="users-counter-number" id="solvedEnigmas">0</span>
+        </div>
+    </div>
+
+    <!-- Aviso de VPN -->
+    <div class="vpn-warning" id="vpnWarning">
+        <div class="vpn-warning-content">
+            <div class="vpn-warning-icon">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h2 class="vpn-warning-title">Acesso Bloqueado</h2>
+            <p class="vpn-warning-text" id="vpnWarningText">
+                Detectamos que você está utilizando uma VPN, proxy ou rede Tor.
+                Por razões de segurança, o acesso ao sistema de enigmas forenses
+                não é permitido através dessas redes.
+            </p>
+            <p class="vpn-warning-text">
+                Por favor, desative sua VPN ou proxy e recarregue a página para continuar.
+            </p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Decodificador Forense</h1>
+            <p class="subtitle">Inverta o texto para descobrir a verdade oculta</p>
+        </div>
+
+        <div class="leather-panel">
+            <div class="difficulty-badge" id="difficultyBadge">Nível 1</div>
+            <div class="seal">
+                <i class="fas fa-balance-scale seal-icon"></i>
+            </div>
+            <div class="counter" id="counter">Inversões: <span id="counterValue">0</span>/15</div>
+            <div class="input-container">
+                <input id="input" type="text" placeholder="Digite uma sequência de caracteres...">
+                <button id="invertButton" class="invert-button">Inverter Texto</button>
+            </div>
+            <div class="output-container">
+                <div class="output" id="output"></div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enigma Nível 1 -->
+    <div class="enigma-container" id="enigmaLevel1Container">
+        <div class="enigma-content">
+            <h2 class="enigma-title">Conspiração do Papiro Perdido</h2>
+            <p class="enigma-description">
+                Você acaba de desbloquear um arquivo confidencial da Divisão de Crimes Históricos. Um artefato egípcio
+                foi roubado do Museu Nacional e todas as evidências apontam para uma conspiração internacional que
+                busca ocultar a verdade sobre um dos maiores enigmas do Antigo Egito.
+            </p>
+            <p class="enigma-description">
+                Nossa equipe forense interceptou uma comunicação criptografada entre os suspeitos. Acreditamos que
+                esta mensagem contém a localização do artefato roubado e a chave para desvendar o enigma milenar.
+            </p>
+
+            <div class="enigma-clue">
+                <p><strong>Mensagem Interceptada:</strong></p>
+                <p>"A verdade sobre a Grande Pirâmide está escondida onde o sol nunca alcança. Apenas aqueles que
+                    conhecem o código podem acessar o conhecimento proibido. O segredo está protegido por um hash que
+                    apenas os iniciados podem decifrar."</p>
+            </div>
+
+            <p class="enigma-description">
+                Nossa análise forense identificou que a chave para decifrar o código está relacionada ao enigma da
+                Pedra de Roseta e à conspiração que envolve a verdadeira função das pirâmides. Decodifique o hash
+                abaixo para revelar a próxima pista.
+            </p>
+
+            <div class="enigma-hash" id="enigmaHash">
+                7a6f6e6120323920e28093204f2070617069726f2064652054757269
+            </div>
+
+            <p class="enigma-description">
+                <strong>Dica:</strong> O hash acima está em formato hexadecimal. Converta-o para texto para descobrir a
+                mensagem oculta.
+                Você precisará de conhecimentos em decodificação hexadecimal.
+            </p>
+
+            <input type="text" id="enigmaInputLevel1" class="enigma-input" placeholder="Digite a mensagem decodificada...">
+            <button id="checkAnswerLevel1" class="enigma-button">Verificar Resposta</button>
+
+            <div class="enigma-result" id="enigmaResultLevel1">
+                <p class="enigma-failure" id="enigmaFailureLevel1">Resposta incorreta. Tente novamente.</p>
+                <p class="enigma-success" id="enigmaSuccessLevel1">Resposta correta! Desbloqueando informações sobre o enigma
+                    egípcio...</p>
+            </div>
+
+            <div class="egyptian-clue" id="egyptianClue">
+                <h3 class="egyptian-clue-title">O Enigma da Zona 29 - O Papiro de Turim</h3>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Turin_Papyrus_Map.jpg/800px-Turin_Papyrus_Map.jpg" alt="Papiro de Turim" class="egyptian-image">
+                <div class="egyptian-clue-content">
+                    <p>
+                        O Papiro de Turim é um dos documentos mais intrigantes da história egípcia. Datado do reinado de
+                        Ramsés IV
+                        (cerca de 1150 a.C.), este mapa é considerado o mais antigo mapa topográfico conhecido no mundo.
+                        O documento
+                        mostra uma região de mineração de ouro no deserto oriental do Egito, conhecida como Wadi Hammamat.
+                    </p>
+                    <p>
+                        O que torna este papiro particularmente misterioso é a área conhecida como "Zona 29" - uma região
+                        que
+                        aparece no mapa mas que arqueólogos modernos nunca conseguiram localizar com precisão. Teorias
+                        conspiratórias
+                        sugerem que esta área continha conhecimentos avançados sobre astronomia e matemática que foram
+                        deliberadamente
+                        ocultados ao longo da história.
+                    </p>
+                    <p>
+                        Estudos recentes revelaram que o papiro contém anotações sobre proporções matemáticas que
+                        coincidem
+                        exatamente com as dimensões da Grande Pirâmide de Gizé, sugerindo que os antigos egípcios possuíam
+                        conhecimentos geométricos muito mais avançados do que se acreditava anteriormente.
+                    </p>
+                    <p>
+                        A conspiração em torno do Papiro de Turim ganhou força quando, em 1969, um grupo de pesquisadores
+                        independentes descobriu que as coordenadas indicadas no mapa, quando sobrepostas a um mapa estelar,
+                        alinham-se perfeitamente com a constelação de Órion - a mesma configuração estelar que as três
+                        pirâmides de Gizé parecem representar na Terra.
+                    </p>
+                    <p>
+                        Este enigma real do Antigo Egito continua a intrigar arqueólogos e historiadores até hoje, com
+                        mais
+                        de 70% dos especialistas reconhecendo que o Papiro de Turim contém informações que desafiam nossa
+                        compreensão atual sobre o conhecimento científico dos antigos egípcios.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enigma Nível 2 (após 100 resoluções) -->
+    <div class="enigma-container enigma-level-2" id="enigmaLevel2Container">
+        <div class="enigma-content">
+            <h2 class="enigma-title">O Código de Dendera</h2>
+            <div class="enigma-timer" id="enigmaTimer">Tempo restante: 10:00</div>
+            <p class="enigma-description">
+                Após o sucesso da primeira fase da investigação, nossa equipe descobriu uma conexão entre o Papiro de Turim
+                e o misterioso Templo de Dendera. Os suspeitos agora estão tentando acessar informações sobre o Zodíaco de
+                Dendera,
+                um antigo artefato que muitos acreditam conter conhecimentos astronômicos avançados.
+            </p>
+            <p class="enigma-description">
+                Interceptamos uma nova comunicação criptografada, mas desta vez o código é mais complexo e possui um
+                mecanismo
+                de autodestruição. Você tem apenas 10 minutos para decifrá-lo antes que a mensagem seja perdida para
+                sempre.
+            </p>
+
+            <div class="enigma-clue">
+                <p><strong>Mensagem Interceptada:</strong></p>
+                <p>"O segredo de Dendera está escondido nas estrelas. A chave para o conhecimento proibido está no zodíaco.
+                    Decifre a sequência e encontre a entrada para a câmara secreta."</p>
+            </div>
+
+            <div class="enigma-hash" id="enigmaHashLevel2">
+                4c7a4a684d7a6c684e44497a4c7a4a684d7a6c684e44497a4c7a4a684d7a6c684e44497a4c7a4a684d7a6c684e44497a
+            </div>
+
+            <p class="enigma-description">
+                <strong>Dica:</strong> Este código utiliza múltiplas camadas de criptografia. Primeiro decodifique o
+                hexadecimal,
+                depois aplique uma decodificação Base64, e finalmente decifre a mensagem resultante usando a cifra de
+                César com
+                deslocamento igual ao número de lados do zodíaco de Dendera.
+            </p>
+
+            <input type="text" id="enigmaInputLevel2" class="enigma-input" placeholder="Digite a mensagem decodificada...">
+            <button id="checkAnswerLevel2" class="enigma-button">Verificar Resposta</button>
+            <button id="getHintLevel2" class="enigma-hint-button">Obter Dica (reduz pontuação)</button>
+            <p id="enigmaHintLevel2" class="enigma-hint">O zodíaco de Dendera possui 12 signos. Após decodificar o
+                hexadecimal e Base64, aplique um deslocamento de 12 caracteres na cifra de César.</p>
+
+            <div class="enigma-result" id="enigmaResultLevel2">
+                <p class="enigma-failure" id="enigmaFailureLevel2">Resposta incorreta. Tente novamente.</p>
+                <p class="enigma-success" id="enigmaSuccessLevel2">Resposta correta! Você decifrou o código de Dendera.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enigma Nível 3 (após 1000 resoluções) -->
+    <div class="enigma-container enigma-level-3" id="enigmaLevel3Container">
+        <div class="enigma-content">
+            <h2 class="enigma-title">O Labirinto de Hawara</h2>
+            <div class="enigma-timer" id="enigmaTimerLevel3">Tempo restante: 15:00</div>
+            <p class="enigma-description">
+                A investigação atingiu seu ponto crítico. Os suspeitos estão prestes a acessar o lendário Labirinto de
+                Hawara,
+                descrito por Heródoto como contendo mais de 3.000 salas interconectadas e que supostamente guarda o maior
+                segredo da civilização egípcia.
+            </p>
+            <p class="enigma-description">
+                Esta é nossa última chance de interceptar os criminosos. Decodifique a mensagem final, que combina
+                elementos
+                de criptografia moderna com símbolos hieroglíficos antigos. O tempo é essencial.
+            </p>
+
+            <div class="enigma-clue">
+                <p><strong>Mensagem Final Interceptada:</strong></p>
+                <p>"O labirinto guarda o conhecimento dos deuses. Apenas aquele que compreende a linguagem das estrelas e
+                    dos
+                    números pode navegar por seus corredores. A entrada está selada com o código final."</p>
+            </div>
+
+            <div class="enigma-hash" id="enigmaHashLevel3">
+                U2FsdGVkX1+QHDkw8/7JhZUZOJvs4CdCnxnOdKVHRZQZbgZT9Kx0Vy9vZXNlY3JldA==
+            </div>
+
+            <p class="enigma-description">
+                <strong>Desafio:</strong> Este é um código AES-256 criptografado e codificado em Base64. A chave de
+                descriptografia
+                está escondida em um padrão matemático relacionado à sequência de Fibonacci e às proporções da Grande
+                Pirâmide.
+            </p>
+
+            <input type="text" id="enigmaInputLevel3" class="enigma-input" placeholder="Digite a mensagem decodificada...">
+            <button id="checkAnswerLevel3" class="enigma-button">Verificar Resposta</button>
+            <button id="getHintLevel3" class="enigma-hint-button">Obter Dica (reduz pontuação)</button>
+            <p id="enigmaHintLevel3" class="enigma-hint">A chave de descriptografia é a razão entre a altura e a metade da
+                base da Grande Pirâmide, multiplicada pelos primeiros 5 números da sequência de Fibonacci. Arredonde para
+                o número inteiro mais próximo.</p>
+
+            <div class="enigma-result" id="enigmaResultLevel3">
+                <p class="enigma-failure" id="enigmaFailureLevel3">Resposta incorreta. Tente novamente.</p>
+                <p class="enigma-success" id="enigmaSuccessLevel3">Resposta correta! Você desvendou o mistério final do
+                    Labirinto de Hawara.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="debug-info" id="debugInfo">Inversões: 0</div>
+
+    <script>
+        // Elementos DOM
+        const input = document.getElementById("input");
+        const output = document.getElementById("output");
+        const counter = document.getElementById("counter");
+        const counterValue = document.getElementById("counterValue");
+        const invertButton = document.getElementById("invertButton");
+        const burnEffect = document.getElementById("burnEffect");
+        const enigmaLevel1Container = document.getElementById("enigmaLevel1Container");
+        const checkAnswerLevel1Btn = document.getElementById("checkAnswerLevel1");
+        const enigmaInputLevel1 = document.getElementById("enigmaInputLevel1");
+        const enigmaResultLevel1 = document.getElementById("enigmaResultLevel1");
+        const enigmaSuccessLevel1 = document.getElementById("enigmaSuccessLevel1");
+        const enigmaFailureLevel1 = document.getElementById("enigmaFailureLevel1");
+        const egyptianClue = document.getElementById("egyptianClue");
+        const progress = document.getElementById("progress");
+        const particlesContainer = document.getElementById("particles");
+        const usersCounter = document.getElementById("usersCounter");
+        const activeUsersCounter = document.getElementById("activeUsers");
+        const activatedEnigmasCounter = document.getElementById("activatedEnigmas");
+        const solvedEnigmasCounter = document.getElementById("solvedEnigmas");
+        const vpnWarning = document.getElementById("vpnWarning");
+        const vpnWarningText = document.getElementById("vpnWarningText");
+        const difficultyBadge = document.getElementById("difficultyBadge");
+        const debugInfo = document.getElementById("debugInfo");
+
+        // Enigma Nível 2
+        const enigmaLevel2Container = document.getElementById("enigmaLevel2Container");
+        const checkAnswerLevel2Btn = document.getElementById("checkAnswerLevel2");
+        const enigmaInputLevel2 = document.getElementById("enigmaInputLevel2");
+        const enigmaTimerElement = document.getElementById("enigmaTimer");
+        const getHintLevel2Btn = document.getElementById("getHintLevel2");
+        const enigmaHintLevel2 = document.getElementById("enigmaHintLevel2");
+
+        // Enigma Nível 3
+        const enigmaLevel3Container = document.getElementById("enigmaLevel3Container");
+        const checkAnswerLevel3Btn = document.getElementById("checkAnswerLevel3");
+        const enigmaInputLevel3 = document.getElementById("enigmaInputLevel3");
+        const enigmaTimerLevel3Element = document.getElementById("enigmaTimerLevel3");
+        const getHintLevel3Btn = document.getElementById("getHintLevel3");
+        const enigmaHintLevel3 = document.getElementById("enigmaHintLevel3");
+
+        // Contador de inversões
+        let inversions = 0;
+
+        // Variáveis para controle de usuários e enigmas
+        let currentDifficulty = 1;
+        let timerInterval = null;
+        let timerLevel3Interval = null;
+        let timeLeft = 600; // 10 minutos em segundos
+        let timeLeftLevel3 = 900; // 15 minutos em segundos
+        let enigmaActivated = false;
+
+        // Respostas corretas para cada nível
+        const correctAnswers = {
+            level1: "zona 29 – o papiro de turim",
+            level2: "a câmara secreta está sob a esfinge",
+            level3: "1.618033988749895",
+        };
+
+        // Inicialização
+        document.addEventListener("DOMContentLoaded", async () => {
+            createParticles();
+
+            // Registrar callbacks do backend service
+            backendService.on("onStatsUpdate", updateStatsUI);
+            backendService.on("onDifficultyChange", updateDifficultyUI);
+            backendService.on("onVpnDetected", showVpnWarning);
+
+            // Verificar VPN ao carregar
+            const isVpn = await backendService.checkVpn();
+            if (isVpn) {
+                return; // Bloquear carregamento se VPN for detectada
+            }
+
+            // Obter estatísticas iniciais
+            const initialStats = await backendService.getStats();
+            updateStatsUI(initialStats);
+            updateDifficultyUI({ level: calculateDifficulty(initialStats.solvedEnigmas) });
+
+            // Recuperar contagem de inversões do localStorage
+            const savedInversions = localStorage.getItem("enigma_inversions");
+            if (savedInversions) {
+                inversions = parseInt(savedInversions);
+                counterValue.textContent = inversions;
+                updateProgressBar();
+            }
+
+            // Verificar se o enigma já foi ativado nesta sessão
+            enigmaActivated = localStorage.getItem("enigma_activated") === "true";
+
+            // Se já tiver 15 inversões e o enigma não foi ativado, ativar
+            if (inversions >= 15 && !enigmaActivated) {
+                setTimeout(() => {
+                    activateEnigma();
+                }, 1000);
+            }
+
+            // Ativar modo de depuração para desenvolvimento
+            const debugMode = false;
+            if (debugMode) {
+                debugInfo.style.display = "block";
+            }
+        });
+
+        // Atualizar UI com estatísticas
+        function updateStatsUI(stats) {
+            if (stats) {
+                activeUsersCounter.textContent = stats.activeUsers || 0;
+                activatedEnigmasCounter.textContent = stats.activatedEnigmas || 0;
+                solvedEnigmasCounter.textContent = stats.solvedEnigmas || 0;
+            }
+        }
+
+        // Calcular nível de dificuldade baseado nos enigmas resolvidos
+        function calculateDifficulty(solvedCount) {
+            if (solvedCount >= 1000) {
+                return 3;
+            } else if (solvedCount >= 100) {
+                return 2;
+            }
+            return 1;
+        }
+
+        // Atualizar UI com nível de dificuldade
+        function updateDifficultyUI(data) {
+            if (data && data.level) {
+                currentDifficulty = data.level;
+                difficultyBadge.textContent = `Nível ${currentDifficulty}`;
+                localStorage.setItem("enigma_difficulty", currentDifficulty);
+            }
+        }
+
+        // Mostrar aviso de VPN
+        function showVpnWarning(data) {
+            vpnWarningText.textContent = data.message || "VPN, proxy ou Tor detectado. Acesso bloqueado.";
+            vpnWarning.style.display = "flex";
+        }
+
+        // Criar partículas de fundo
+        function createParticles() {
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement("div");
+                particle.classList.add("particle");
+
+                // Tamanho aleatório
+                const size = Math.random() * 5 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+
+                // Posição aleatória
+                const posX = Math.random() * window.innerWidth;
+                const posY = Math.random() * window.innerHeight + window.innerHeight;
+                particle.style.left = `${posX}px`;
+                particle.style.top = `${posY}px`;
+
+                // Duração e atraso aleatórios
+                const duration = Math.random() * 15 + 10;
+                const delay = Math.random() * 10;
+                particle.style.animation = `float ${duration}s infinite linear ${delay}s`;
+
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Atualizar barra de progresso
+        function updateProgressBar() {
+            progress.style.width = `${(inversions / 15) * 100}%`;
+        }
+
+        // Função para inverter texto (acionada pelo botão)
+        invertButton.addEventListener("click", async () => {
+            // Verificar se VPN foi detectada
+            const isVpn = await backendService.checkVpn();
+            if (isVpn) {
+                return;
+            }
+
+            // Verificar se há texto para inverter
+            if (input.value.trim() === "") {
+                return;
+            }
+
+            const reversed = input.value.split("").reverse();
+            output.innerHTML = "";
+
+            reversed.forEach((char, i) => {
+                const span = document.createElement("span");
+                span.textContent = char;
+                span.classList.add("letter");
+                output.appendChild(span);
+
+                setTimeout(() => {
+                    span.classList.add("show");
+                }, i * 100);
+            });
+
+            // Incrementar contador de inversões apenas se o enigma não foi ativado
+            if (!enigmaActivated && inversions < 15) {
+                inversions++;
+                counterValue.textContent = inversions;
+
+                // Salvar no localStorage
+                localStorage.setItem("enigma_inversions", inversions);
+
+                // Atualizar debug info
+                debugInfo.textContent = `Inversões: ${inversions}`;
+
+                // Atualizar progresso
+                updateProgressBar();
+
+                // Ativar enigma na 15ª inversão
+                if (inversions === 15) {
+                    setTimeout(() => {
+                        activateEnigma();
+                    }, 1000);
+                }
+            }
+
+            // Limpar campo de entrada para próxima inversão
+            input.value = "";
+        });
+
+        // Função para ativar o enigma
+        async function activateEnigma() {
+            // Verificar se VPN foi detectada
+            const isVpn = await backendService.checkVpn();
+            if (isVpn) {
+                return;
+            }
+
+            // Verificar se já foi ativado
+            if (enigmaActivated) {
+                return;
+            }
+
+            // Registrar ativação do enigma no backend
+            const success = await backendService.registerEnigmaActivation();
+
+            if (success) {
+                enigmaActivated = true;
+                localStorage.setItem("enigma_activated", "true");
+
+                // Efeito de tela queimada
+                burnEffect.classList.add("active");
+
+                // Mostrar enigma após 5 segundos
+                setTimeout(() => {
+                    // Mostrar o enigma correspondente ao nível atual
+                    if (currentDifficulty === 1) {
+                        enigmaLevel1Container.style.display = "flex";
+                        setTimeout(() => {
+                            enigmaLevel1Container.style.opacity = "1";
+                        }, 100);
+                    } else if (currentDifficulty === 2) {
+                        enigmaLevel2Container.style.display = "flex";
+                        setTimeout(() => {
+                            enigmaLevel2Container.style.opacity = "1";
+                            startTimer();
+                        }, 100);
+                    } else if (currentDifficulty === 3) {
+                        enigmaLevel3Container.style.display = "flex";
+                        setTimeout(() => {
+                            enigmaLevel3Container.style.opacity = "1";
+                            startTimerLevel3();
+                        }, 100);
+                    }
+                }, 5000);
+            } else {
+                console.error("Falha ao registrar ativação do enigma no backend");
+                // Informar usuário sobre o erro?
+            }
+        }
+
+        // Iniciar timer para o enigma nível 2
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 600; // 10 minutos
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    // Tempo esgotado, fechar enigma
+                    enigmaLevel2Container.style.opacity = "0";
+                    setTimeout(() => {
+                        enigmaLevel2Container.style.display = "none";
+                        alert("Tempo esgotado! A mensagem se autodestruiu.");
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // Atualizar display do timer
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            enigmaTimerElement.textContent = `Tempo restante: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+            // Mudar cor quando estiver acabando o tempo
+            if (timeLeft < 60) {
+                enigmaTimerElement.style.color = "#f44336";
+            } else if (timeLeft < 120) {
+                enigmaTimerElement.style.color = "#ff9800";
+            }
+        }
+
+        // Iniciar timer para o enigma nível 3
+        function startTimerLevel3() {
+            clearInterval(timerLevel3Interval);
+            timeLeftLevel3 = 900; // 15 minutos
+            updateTimerLevel3Display();
+
+            timerLevel3Interval = setInterval(() => {
+                timeLeftLevel3--;
+                updateTimerLevel3Display();
+
+                if (timeLeftLevel3 <= 0) {
+                    clearInterval(timerLevel3Interval);
+                    // Tempo esgotado, fechar enigma
+                    enigmaLevel3Container.style.opacity = "0";
+                    setTimeout(() => {
+                        enigmaLevel3Container.style.display = "none";
+                        alert("Tempo esgotado! A mensagem se autodestruiu.");
+                    }, 1000);
+                }
+            }, 1000);
+        }
+
+        // Atualizar display do timer nível 3
+        function updateTimerLevel3Display() {
+            const minutes = Math.floor(timeLeftLevel3 / 60);
+            const seconds = timeLeftLevel3 % 60;
+            enigmaTimerLevel3Element.textContent = `Tempo restante: ${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+            // Mudar cor quando estiver acabando o tempo
+            if (timeLeftLevel3 < 60) {
+                enigmaTimerLevel3Element.style.color = "#f44336";
+            } else if (timeLeftLevel3 < 180) {
+                enigmaTimerLevel3Element.style.color = "#ff9800";
+            }
+        }
+
+        // Verificar resposta do enigma nível 1
+        checkAnswerLevel1Btn.addEventListener("click", async () => {
+            const userAnswer = enigmaInputLevel1.value.trim().toLowerCase();
+
+            enigmaResultLevel1.style.display = "block";
+
+            if (userAnswer === correctAnswers.level1) {
+                enigmaSuccessLevel1.style.display = "block";
+                enigmaFailureLevel1.style.display = "none";
+
+                // Registrar resolução do enigma no backend
+                const newDifficulty = await backendService.registerEnigmaSolution(1);
+                if (newDifficulty) {
+                    updateDifficultyUI({ level: newDifficulty });
+                }
+
+                // Mostrar informações sobre o enigma egípcio
+                setTimeout(() => {
+                    egyptianClue.style.display = "block";
+                }, 2000);
+            } else {
+                enigmaSuccessLevel1.style.display = "none";
+                enigmaFailureLevel1.style.display = "block";
+            }
+        });
+
+        // Verificar resposta do enigma nível 2
+        checkAnswerLevel2Btn.addEventListener("click", async () => {
+            const userAnswer = enigmaInputLevel2.value.trim().toLowerCase();
+            const enigmaResultLevel2 = document.getElementById("enigmaResultLevel2");
+            const enigmaSuccessLevel2 = document.getElementById("enigmaSuccessLevel2");
+            const enigmaFailureLevel2 = document.getElementById("enigmaFailureLevel2");
+
+            enigmaResultLevel2.style.display = "block";
+
+            if (userAnswer === correctAnswers.level2) {
+                enigmaSuccessLevel2.style.display = "block";
+                enigmaFailureLevel2.style.display = "none";
+
+                // Parar o timer
+                clearInterval(timerInterval);
+
+                // Registrar resolução do enigma no backend
+                const newDifficulty = await backendService.registerEnigmaSolution(2);
+                if (newDifficulty) {
+                    updateDifficultyUI({ level: newDifficulty });
+                }
+
+                // Fechar enigma após 3 segundos
+                setTimeout(() => {
+                    enigmaLevel2Container.style.opacity = "0";
+                    setTimeout(() => {
+                        enigmaLevel2Container.style.display = "none";
+                    }, 1000);
+                }, 3000);
+            } else {
+                enigmaSuccessLevel2.style.display = "none";
+                enigmaFailureLevel2.style.display = "block";
+            }
+        });
+
+        // Verificar resposta do enigma nível 3
+        checkAnswerLevel3Btn.addEventListener("click", async () => {
+            const userAnswer = enigmaInputLevel3.value.trim().toLowerCase();
+            const enigmaResultLevel3 = document.getElementById("enigmaResultLevel3");
+            const enigmaSuccessLevel3 = document.getElementById("enigmaSuccessLevel3");
+            const enigmaFailureLevel3 = document.getElementById("enigmaFailureLevel3");
+
+            enigmaResultLevel3.style.display = "block";
+
+            if (userAnswer === correctAnswers.level3) {
+                enigmaSuccessLevel3.style.display = "block";
+                enigmaFailureLevel3.style.display = "none";
+
+                // Parar o timer
+                clearInterval(timerLevel3Interval);
+
+                // Registrar resolução do enigma no backend
+                const newDifficulty = await backendService.registerEnigmaSolution(3);
+                if (newDifficulty) {
+                    updateDifficultyUI({ level: newDifficulty });
+                }
+
+                // Fechar enigma após 3 segundos
+                setTimeout(() => {
+                    enigmaLevel3Container.style.opacity = "0";
+                    setTimeout(() => {
+                        enigmaLevel3Container.style.display = "none";
+                    }, 1000);
+                }, 3000);
+            } else {
+                enigmaSuccessLevel3.style.display = "none";
+                enigmaFailureLevel3.style.display = "block";
+            }
+        });
+
+        // Mostrar dica para o enigma nível 2
+        getHintLevel2Btn.addEventListener("click", () => {
+            enigmaHintLevel2.style.display = "block";
+            getHintLevel2Btn.style.display = "none";
+        });
+
+        // Mostrar dica para o enigma nível 3
+        getHintLevel3Btn.addEventListener("click", () => {
+            enigmaHintLevel3.style.display = "block";
+            getHintLevel3Btn.style.display = "none";
+        });
+
+        // Funções para decodificação (para console)
+        function hexToText(hex) {
+            return hex.match(/.{1,2}/g).map((byte) => String.fromCharCode(parseInt(byte, 16))).join("");
+        }
+
+        // Dica para o console
+        console.log("Dica: Para converter o hash hexadecimal para texto, você pode usar uma ferramenta online de conversão hex para texto ou usar o seguinte código JavaScript no console:");
+        console.log("function hexToText(hex) { return hex.match(/.{1,2}/g).map(byte => String.fromCharCode(parseInt(byte, 16))).join(''); }");
+        console.log("hexToText('7a6f6e6120323920e28093204f2070617069726f2064652054757269')");
+
+        // Adicionar evento de input para mostrar texto invertido em tempo real
+        input.addEventListener("input", () => {
+            if (input.value.trim() === "") {
+                output.innerHTML = "";
+                return;
+            }
+
+            const reversed = input.value.split("").reverse();
+            output.innerHTML = "";
+
+            reversed.forEach((char, i) => {
+                const span = document.createElement("span");
+                span.textContent = char;
+                span.classList.add("letter");
+                output.appendChild(span);
+
+                setTimeout(() => {
+                    span.classList.add("show");
+                }, i * 50); // Mais rápido para melhor experiência
+            });
+        });
+    </script>
+</body>
+
+</html>
