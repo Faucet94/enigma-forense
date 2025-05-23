@@ -8,26 +8,16 @@ const { v4: uuidv4 } = require('uuid');
 const admin = require('firebase-admin');
 
 // Inicializar Firebase Admin SDK
-// Em produção, use um arquivo de credenciais seguro
-const serviceAccount = {
-  // Aqui iriam as credenciais do Firebase
-  // Em produção, isso seria carregado de variáveis de ambiente ou arquivo seguro
-};
-
-// Inicializar Firebase (em produção, use credenciais reais)
-try {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://enigma-forense-default-rtdb-default-rtdb.firebaseio.com"
-  });
-} catch (error) {
-  // Para desenvolvimento, inicializar com configuração simulada
-  console.log("Usando configuração simulada do Firebase para desenvolvimento");
-  admin.initializeApp({
-    projectId: 'enigma-enigma-forense-default-rtdb',
-    databaseURL: 'https://enigma-forense-default-rtdb-default-rtdb.firebaseio.com'
-  });
-}
+// Carregar credenciais de variáveis de ambiente em produção
+admin.initializeApp({
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    // Adicione outras propriedades se necessário (private_key_id, client_id, etc.)
+  }),
+  databaseURL: process.env.FIREBASE_DATABASE_URL
+});
 
 const db = admin.database();
 const app = express();
