@@ -6,7 +6,7 @@
 // Classe para gerenciar a integração com o backend
 class EnigmaBackendService {
   constructor() {
-    this.baseUrl = 'http://localhost:3000/api'; // URL do backend local
+    this.baseUrl = 'https://enigma-forense-backend.onrender.com/api'; // URL do backend no Render
     this.socket = null;
     this.userId = null;
     this.isConnected = false;
